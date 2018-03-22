@@ -69,64 +69,64 @@
 
 @end
 
-typedef void (^_FDViewControllerWillAppearInjectBlock)(UIViewController *viewController, BOOL animated);
-
-@interface UIViewController (FDFullscreenPopGesturePrivate)
-
-@property (nonatomic, copy) _FDViewControllerWillAppearInjectBlock fd_willAppearInjectBlock;
-
-@end
-
-@implementation UIViewController (FDFullscreenPopGesturePrivate)
-
-+ (void)load
-{
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        Method viewWillAppear_originalMethod = class_getInstanceMethod(self, @selector(viewWillAppear:));
-        Method viewWillAppear_swizzledMethod = class_getInstanceMethod(self, @selector(fd_viewWillAppear:));
-        method_exchangeImplementations(viewWillAppear_originalMethod, viewWillAppear_swizzledMethod);
-    
-        Method viewWillDisappear_originalMethod = class_getInstanceMethod(self, @selector(viewWillDisappear:));
-        Method viewWillDisappear_swizzledMethod = class_getInstanceMethod(self, @selector(fd_viewWillDisappear:));
-        method_exchangeImplementations(viewWillDisappear_originalMethod, viewWillDisappear_swizzledMethod);
-    });
-}
-
-- (void)fd_viewWillAppear:(BOOL)animated
-{
-    // Forward to primary implementation.
-    [self fd_viewWillAppear:animated];
-    
-    if (self.fd_willAppearInjectBlock) {
-        self.fd_willAppearInjectBlock(self, animated);
-    }
-}
-
-- (void)fd_viewWillDisappear:(BOOL)animated
-{
-    // Forward to primary implementation.
-    [self fd_viewWillDisappear:animated];
-    
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        UIViewController *viewController = self.navigationController.viewControllers.lastObject;
-        if (viewController && !viewController.fd_prefersNavigationBarHidden) {
-            [self.navigationController setNavigationBarHidden:NO animated:NO];
-        }
-    });
-}
-
-- (_FDViewControllerWillAppearInjectBlock)fd_willAppearInjectBlock
-{
-    return objc_getAssociatedObject(self, _cmd);
-}
-
-- (void)setFd_willAppearInjectBlock:(_FDViewControllerWillAppearInjectBlock)block
-{
-    objc_setAssociatedObject(self, @selector(fd_willAppearInjectBlock), block, OBJC_ASSOCIATION_COPY_NONATOMIC);
-}
-
-@end
+//typedef void (^_FDViewControllerWillAppearInjectBlock)(UIViewController *viewController, BOOL animated);
+//
+//@interface UIViewController (FDFullscreenPopGesturePrivate)
+//
+//@property (nonatomic, copy) _FDViewControllerWillAppearInjectBlock fd_willAppearInjectBlock;
+//
+//@end
+//
+//@implementation UIViewController (FDFullscreenPopGesturePrivate)
+//
+//+ (void)load
+//{
+//    static dispatch_once_t onceToken;
+//    dispatch_once(&onceToken, ^{
+//        Method viewWillAppear_originalMethod = class_getInstanceMethod(self, @selector(viewWillAppear:));
+//        Method viewWillAppear_swizzledMethod = class_getInstanceMethod(self, @selector(fd_viewWillAppear:));
+//        method_exchangeImplementations(viewWillAppear_originalMethod, viewWillAppear_swizzledMethod);
+//
+//        Method viewWillDisappear_originalMethod = class_getInstanceMethod(self, @selector(viewWillDisappear:));
+//        Method viewWillDisappear_swizzledMethod = class_getInstanceMethod(self, @selector(fd_viewWillDisappear:));
+//        method_exchangeImplementations(viewWillDisappear_originalMethod, viewWillDisappear_swizzledMethod);
+//    });
+//}
+//
+//- (void)fd_viewWillAppear:(BOOL)animated
+//{
+//    // Forward to primary implementation.
+//    [self fd_viewWillAppear:animated];
+//
+//    if (self.fd_willAppearInjectBlock) {
+//        self.fd_willAppearInjectBlock(self, animated);
+//    }
+//}
+//
+//- (void)fd_viewWillDisappear:(BOOL)animated
+//{
+//    // Forward to primary implementation.
+//    [self fd_viewWillDisappear:animated];
+//
+//    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+//        UIViewController *viewController = self.navigationController.viewControllers.lastObject;
+//        if (viewController && !viewController.fd_prefersNavigationBarHidden) {
+//            [self.navigationController setNavigationBarHidden:NO animated:NO];
+//        }
+//    });
+//}
+//
+//- (_FDViewControllerWillAppearInjectBlock)fd_willAppearInjectBlock
+//{
+//    return objc_getAssociatedObject(self, _cmd);
+//}
+//
+//- (void)setFd_willAppearInjectBlock:(_FDViewControllerWillAppearInjectBlock)block
+//{
+//    objc_setAssociatedObject(self, @selector(fd_willAppearInjectBlock), block, OBJC_ASSOCIATION_COPY_NONATOMIC);
+//}
+//
+//@end
 
 @implementation UINavigationController (FDFullscreenPopGesture)
 
@@ -154,12 +154,8 @@ typedef void (^_FDViewControllerWillAppearInjectBlock)(UIViewController *viewCon
 
 - (void)fd_pushViewController:(UIViewController *)viewController animated:(BOOL)animated
 {
-    if ([self isKindOfClass:NSClassFromString(@"MFMessageComposeViewController")]) {
-        [self fd_pushViewController:viewController animated:animated];
-        return;
-    }
-    
-    if (![self.interactivePopGestureRecognizer.view.gestureRecognizers containsObject:self.fd_fullscreenPopGestureRecognizer]) {
+    if (!([self isKindOfClass:NSClassFromString(@"MFMessageComposeViewController")] ||
+          [self.interactivePopGestureRecognizer.view.gestureRecognizers containsObject:self.fd_fullscreenPopGestureRecognizer])) {
         
         // Add our own gesture recognizer to where the onboard screen edge pan gesture recognizer is attached to.
         [self.interactivePopGestureRecognizer.view addGestureRecognizer:self.fd_fullscreenPopGestureRecognizer];
@@ -176,7 +172,7 @@ typedef void (^_FDViewControllerWillAppearInjectBlock)(UIViewController *viewCon
     }
     
     // Handle perferred navigation bar appearance.
-    [self fd_setupViewControllerBasedNavigationBarAppearanceIfNeeded:viewController];
+//    [self fd_setupViewControllerBasedNavigationBarAppearanceIfNeeded:viewController];
     
     // Forward to primary implementation.
     if (![self.viewControllers containsObject:viewController]) {
@@ -184,29 +180,29 @@ typedef void (^_FDViewControllerWillAppearInjectBlock)(UIViewController *viewCon
     }
 }
 
-- (void)fd_setupViewControllerBasedNavigationBarAppearanceIfNeeded:(UIViewController *)appearingViewController
-{
-    if (!self.fd_viewControllerBasedNavigationBarAppearanceEnabled) {
-        return;
-    }
-    
-    __weak typeof(self) weakSelf = self;
-    _FDViewControllerWillAppearInjectBlock block = ^(UIViewController *viewController, BOOL animated) {
-        __strong typeof(weakSelf) strongSelf = weakSelf;
-        if (strongSelf) {
-            [strongSelf setNavigationBarHidden:viewController.fd_prefersNavigationBarHidden animated:animated];
-        }
-    };
-    
-    // Setup will appear inject block to appearing view controller.
-    // Setup disappearing view controller as well, because not every view controller is added into
-    // stack by pushing, maybe by "-setViewControllers:".
-    appearingViewController.fd_willAppearInjectBlock = block;
-    UIViewController *disappearingViewController = self.viewControllers.lastObject;
-    if (disappearingViewController && !disappearingViewController.fd_willAppearInjectBlock) {
-        disappearingViewController.fd_willAppearInjectBlock = block;
-    }
-}
+//- (void)fd_setupViewControllerBasedNavigationBarAppearanceIfNeeded:(UIViewController *)appearingViewController
+//{
+//    if (!self.fd_viewControllerBasedNavigationBarAppearanceEnabled) {
+//        return;
+//    }
+//    
+//    __weak typeof(self) weakSelf = self;
+//    _FDViewControllerWillAppearInjectBlock block = ^(UIViewController *viewController, BOOL animated) {
+//        __strong typeof(weakSelf) strongSelf = weakSelf;
+//        if (strongSelf) {
+//            [strongSelf setNavigationBarHidden:viewController.fd_prefersNavigationBarHidden animated:animated];
+//        }
+//    };
+//    
+//    // Setup will appear inject block to appearing view controller.
+//    // Setup disappearing view controller as well, because not every view controller is added into
+//    // stack by pushing, maybe by "-setViewControllers:".
+//    appearingViewController.fd_willAppearInjectBlock = block;
+//    UIViewController *disappearingViewController = self.viewControllers.lastObject;
+//    if (disappearingViewController && !disappearingViewController.fd_willAppearInjectBlock) {
+//        disappearingViewController.fd_willAppearInjectBlock = block;
+//    }
+//}
 
 - (_FDFullscreenPopGestureRecognizerDelegate *)fd_popGestureRecognizerDelegate
 {
@@ -234,21 +230,21 @@ typedef void (^_FDViewControllerWillAppearInjectBlock)(UIViewController *viewCon
     return panGestureRecognizer;
 }
 
-- (BOOL)fd_viewControllerBasedNavigationBarAppearanceEnabled
-{
-    NSNumber *number = objc_getAssociatedObject(self, _cmd);
-    if (number) {
-        return number.boolValue;
-    }
-    self.fd_viewControllerBasedNavigationBarAppearanceEnabled = YES;
-    return YES;
-}
-
-- (void)setFd_viewControllerBasedNavigationBarAppearanceEnabled:(BOOL)enabled
-{
-    SEL key = @selector(fd_viewControllerBasedNavigationBarAppearanceEnabled);
-    objc_setAssociatedObject(self, key, @(enabled), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-}
+//- (BOOL)fd_viewControllerBasedNavigationBarAppearanceEnabled
+//{
+//    NSNumber *number = objc_getAssociatedObject(self, _cmd);
+//    if (number) {
+//        return number.boolValue;
+//    }
+//    self.fd_viewControllerBasedNavigationBarAppearanceEnabled = YES;
+//    return YES;
+//}
+//
+//- (void)setFd_viewControllerBasedNavigationBarAppearanceEnabled:(BOOL)enabled
+//{
+//    SEL key = @selector(fd_viewControllerBasedNavigationBarAppearanceEnabled);
+//    objc_setAssociatedObject(self, key, @(enabled), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+//}
 
 @end
 
@@ -264,15 +260,15 @@ typedef void (^_FDViewControllerWillAppearInjectBlock)(UIViewController *viewCon
     objc_setAssociatedObject(self, @selector(fd_interactivePopDisabled), @(disabled), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
-- (BOOL)fd_prefersNavigationBarHidden
-{
-    return [objc_getAssociatedObject(self, _cmd) boolValue];
-}
-
-- (void)setFd_prefersNavigationBarHidden:(BOOL)hidden
-{
-    objc_setAssociatedObject(self, @selector(fd_prefersNavigationBarHidden), @(hidden), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-}
+//- (BOOL)fd_prefersNavigationBarHidden
+//{
+//    return [objc_getAssociatedObject(self, _cmd) boolValue];
+//}
+//
+//- (void)setFd_prefersNavigationBarHidden:(BOOL)hidden
+//{
+//    objc_setAssociatedObject(self, @selector(fd_prefersNavigationBarHidden), @(hidden), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+//}
 
 
 - (CGFloat)fd_interactivePopMaxAllowedInitialDistanceToLeftEdge
